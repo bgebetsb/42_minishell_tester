@@ -239,7 +239,7 @@ test_from_file() {
 			stderr_bash=$(cat "$TMP_OUTDIR/tmp_err_bash")
 			if [[ $stderr_bash == bash:* ]] ;
 			then
-				stderr_bash=$(echo "$stderr_bash" | sed 's/^bash: line[^:]*//')
+				stderr_bash=$(echo "$stderr_bash" | sed 's/^\(bash: line\)\?[^:]*//')
 				stderr_minishell=$(echo "$stderr_minishell" | sed 's/^[^:]*//')
 			fi
 			if ! diff -q <(echo "$stderr_minishell") <(echo "$stderr_bash") >/dev/null ;
