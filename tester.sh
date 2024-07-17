@@ -237,7 +237,7 @@ test_from_file() {
 			# Filter out program name prefix before first colon from minishell error messages and "bash: line X" prefix from bash error messages
 			stderr_minishell=$(cat "$TMP_OUTDIR/tmp_err_minishell")
 			stderr_bash=$(cat "$TMP_OUTDIR/tmp_err_bash")
-			if [[ $stderr_bash == bash:* ]] ;
+			if [[ $stderr_bash == *bash:* ]] ;
 			then
 				stderr_bash=$(echo "$stderr_bash" | sed 's/^\(bash: line\)\?[^:]*//')
 				stderr_minishell=$(echo "$stderr_minishell" | sed 's/^[^:]*//')
