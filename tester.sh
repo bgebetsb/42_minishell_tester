@@ -163,6 +163,10 @@ process_options() {
 				fi
 				shift 2
 				;;
+			-q|--quiet)
+				QUIET="true"
+				shift
+				;;
 			-h|--help)
 				print_usage
 				exit 0
@@ -352,7 +356,6 @@ run_test() {
 			fi
 			continue
 		else
-			printf "\033[1;35m%-4s\033[m" "  $i:	"
 			tmp_line_count=$line_count
 			while [[ $end_of_file == 0 ]] && [[ $line != \#* ]] && [[ $line != "" ]] ; do
 				input+="$line$NL"
@@ -370,8 +373,6 @@ run_test() {
 			echo -n "enable -n .$NL$input" | eval "$env bash" 2>"$TMP_OUTDIR/tmp_err_bash" >"$TMP_OUTDIR/tmp_out_bash"
 			exit_bash=$?
 
-			# Check stdout
-			echo -ne "\033[1;34mSTD_OUT:\033[m "
 			if [[ -n "$MINISHELL_PROMPT" ]] ; then
 				if [[ $READLINE == "true" ]] ; then
 					# Filter out the prompt line of readline from stdout
@@ -381,8 +382,52 @@ run_test() {
 					sed -i "s/^$MINISHELL_PROMPT//" "$TMP_OUTDIR/tmp_out_minishell"
 				fi
 			fi
+			if [[ -n "$MINISHELL_EXIT_MSG" ]] ; then
+				# Filter out the exit message from stderr
+				sed -i "/^$MINISHELL_EXIT_MSG$/d" "$TMP_OUTDIR/tmp_err_minishell"
+			fi
+			if grep -q '^bash: line [0-9]*:' "$TMP_OUTDIR/tmp_err_bash" ; then
+				# Normalize bash stderr by removing the program name and line number prefix
+				sed -i 's/^bash: line [0-9]*:/:/' "$TMP_OUTDIR/tmp_err_bash"
+				# Normalize minishell stderr by removing its program name prefix
+				sed -i "s/^\\($MINISHELL_ERR_NAME: line [0-9]*:\\|$MINISHELL_ERR_NAME:\\)/:/" "$TMP_OUTDIR/tmp_err_minishell"
+				# Remove the next line after a specific syntax error message in bash stderr
+				sed -i '/^: syntax error near unexpected token/{n; d}' "$TMP_OUTDIR/tmp_err_bash"
+			fi
+
+			if [[ "$QUIET" == "true" ]]; then
+				if diff -q "$TMP_OUTDIR/tmp_out_minishell" "$TMP_OUTDIR/tmp_out_bash" >/dev/null && diff -q "$TMP_OUTDIR/tmp_err_minishell" "$TMP_OUTDIR/tmp_err_bash" >/dev/null && [[ $exit_minishell == $exit_bash ]]; then
+					input=""
+					((i++))
+					((TEST_COUNT++))
+				   continue
+				fi	   
+			fi
+
+			printf "\033[1;35m%-4s\033[m" "  $i:	"
+			# Check stdout
+			echo -ne "\033[1;34mSTD_OUT:\033[m "
 			if ! diff -q "$TMP_OUTDIR/tmp_out_minishell" "$TMP_OUTDIR/tmp_out_bash" >/dev/null ; then
 				echo -ne "❌  " | tr '\n' ' '
+			else
+				echo -ne "✅  "
+			fi
+			# Check stderr
+			echo -ne "\033[1;33mSTD_ERR:\033[m "
+			if ! diff -q "$TMP_OUTDIR/tmp_err_minishell" "$TMP_OUTDIR/tmp_err_bash" >/dev/null ; then
+				echo -ne "❌  " | tr '\n' ' '
+			else
+				echo -ne "✅  "
+			fi
+			# Check exit code
+			echo -ne "\033[1;36mEXIT_CODE:\033[m "
+			if [[ $exit_minishell != $exit_bash ]] ; then
+				echo -ne "❌\033[1;31m [ minishell($exit_minishell)  bash($exit_bash) ]\033[m  " | tr '\n' ' '
+			else
+				echo -ne "✅  "
+			fi
+			echo -e "\033[0;90m$file:$tmp_line_count\033[m  "
+			if ! diff -q "$TMP_OUTDIR/tmp_out_minishell" "$TMP_OUTDIR/tmp_out_bash" >/dev/null ; then
 				((TEST_KO_OUT++))
 				((FAILED++))
 				mkdir -p "$OUTDIR/$dir_name/$file_name" 2>/dev/null
@@ -396,27 +441,11 @@ run_test() {
 				mv "$TMP_OUTDIR/tmp_out_minishell" "$OUTDIR/$dir_name/$file_name/stdout_minishell_$i" 2>/dev/null
 				mv "$TMP_OUTDIR/tmp_out_bash" "$OUTDIR/$dir_name/$file_name/stdout_bash_$i" 2>/dev/null
 			else
-				echo -ne "✅  "
 				((TEST_OK++))
 				((ONE++))
 			fi
 
-			# Check stderr
-			echo -ne "\033[1;33mSTD_ERR:\033[m "
-			if [[ -n "$MINISHELL_EXIT_MSG" ]] ; then
-				# Filter out the exit message from stderr
-				sed -i "/^$MINISHELL_EXIT_MSG$/d" "$TMP_OUTDIR/tmp_err_minishell"
-			fi
-			if grep -q '^bash: line [0-9]*:' "$TMP_OUTDIR/tmp_err_bash" ; then
-				# Normalize bash stderr by removing the program name and line number prefix
-				sed -i 's/^bash: line [0-9]*:/:/' "$TMP_OUTDIR/tmp_err_bash"
-				# Normalize minishell stderr by removing its program name prefix
-				sed -i "s/^\\($MINISHELL_ERR_NAME: line [0-9]*:\\|$MINISHELL_ERR_NAME:\\)/:/" "$TMP_OUTDIR/tmp_err_minishell"
-				# Remove the next line after a specific syntax error message in bash stderr
-				sed -i '/^: syntax error near unexpected token/{n; d}' "$TMP_OUTDIR/tmp_err_bash"
-			fi
 			if ! diff -q "$TMP_OUTDIR/tmp_err_minishell" "$TMP_OUTDIR/tmp_err_bash" >/dev/null ; then
-				echo -ne "❌  " | tr '\n' ' '
 				((TEST_KO_ERR++))
 				((FAILED++))
 				mkdir -p "$OUTDIR/$dir_name/$file_name" 2>/dev/null
@@ -430,21 +459,16 @@ run_test() {
 				mv "$TMP_OUTDIR/tmp_err_minishell" "$OUTDIR/$dir_name/$file_name/stderr_minishell_$i" 2>/dev/null
 				mv "$TMP_OUTDIR/tmp_err_bash" "$OUTDIR/$dir_name/$file_name/stderr_bash_$i" 2>/dev/null
 			else
-				echo -ne "✅  "
 				((TEST_OK++))
 				((TWO++))
 			fi
 
-			# Check exit code
-			echo -ne "\033[1;36mEXIT_CODE:\033[m "
 			if [[ $exit_minishell != $exit_bash ]] ; then
 				echo "Exit Code Bash: $exit_bash"
 				echo "Exit Code Minishell: $exit_minishell"
-				echo -ne "❌\033[1;31m [ minishell($exit_minishell)  bash($exit_bash) ]\033[m  " | tr '\n' ' '
 				((TEST_KO_EXIT++))
 				((FAILED++))
 			else
-				echo -ne "✅  "
 				((TEST_OK++))
 				((THREE++))
 			fi
@@ -499,7 +523,6 @@ run_test() {
 			input=""
 			((i++))
 			((TEST_COUNT++))
-			echo -e "\033[0;90m$file:$tmp_line_count\033[m  "
 			if [[ $ONE == 1 && $TWO == 1 && $THREE == 1 ]] ; then
 				((GOOD_TEST++))
 				((ONE--))
