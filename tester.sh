@@ -388,7 +388,7 @@ run_test() {
 				mkdir -p "$OUTDIR/$dir_name/$file_name" 2>/dev/null
 				echo
 				echo "$input"
-				diff "$TMP_OUTDIR/tmp_out_minishell" "$TMP_OUTDIR/tmp_out_bash"
+				diff --color=always "$TMP_OUTDIR/tmp_out_minishell" "$TMP_OUTDIR/tmp_out_bash"
 				echo "stdout_minishell:"
 				cat "$TMP_OUTDIR/tmp_out_minishell"
 				echo "stdout_bash:"
@@ -422,7 +422,7 @@ run_test() {
 				mkdir -p "$OUTDIR/$dir_name/$file_name" 2>/dev/null
 				echo
 				echo "$input"
-				diff "$TMP_OUTDIR/tmp_err_minishell" "$TMP_OUTDIR/tmp_err_bash"
+				diff --color=always "$TMP_OUTDIR/tmp_err_minishell" "$TMP_OUTDIR/tmp_err_bash"
 				echo "stderr_minishell:"
 				cat "$TMP_OUTDIR/tmp_err_minishell"
 				echo "stderr_bash:"
