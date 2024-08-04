@@ -386,6 +386,13 @@ run_test() {
 				((TEST_KO_OUT++))
 				((FAILED++))
 				mkdir -p "$OUTDIR/$dir_name/$file_name" 2>/dev/null
+				echo
+				echo "$input"
+				diff "$TMP_OUTDIR/tmp_out_minishell" "$TMP_OUTDIR/tmp_out_bash"
+				echo "stdout_minishell:"
+				cat "$TMP_OUTDIR/tmp_out_minishell"
+				echo "stdout_bash:"
+				cat "$TMP_OUTDIR/tmp_out_bash"
 				mv "$TMP_OUTDIR/tmp_out_minishell" "$OUTDIR/$dir_name/$file_name/stdout_minishell_$i" 2>/dev/null
 				mv "$TMP_OUTDIR/tmp_out_bash" "$OUTDIR/$dir_name/$file_name/stdout_bash_$i" 2>/dev/null
 			else
@@ -413,6 +420,13 @@ run_test() {
 				((TEST_KO_ERR++))
 				((FAILED++))
 				mkdir -p "$OUTDIR/$dir_name/$file_name" 2>/dev/null
+				echo
+				echo "$input"
+				diff "$TMP_OUTDIR/tmp_err_minishell" "$TMP_OUTDIR/tmp_err_bash"
+				echo "stderr_minishell:"
+				cat "$TMP_OUTDIR/tmp_err_minishell"
+				echo "stderr_bash:"
+				cat "$TMP_OUTDIR/tmp_err_bash"
 				mv "$TMP_OUTDIR/tmp_err_minishell" "$OUTDIR/$dir_name/$file_name/stderr_minishell_$i" 2>/dev/null
 				mv "$TMP_OUTDIR/tmp_err_bash" "$OUTDIR/$dir_name/$file_name/stderr_bash_$i" 2>/dev/null
 			else
@@ -424,6 +438,8 @@ run_test() {
 			# Check exit code
 			echo -ne "\033[1;36mEXIT_CODE:\033[m "
 			if [[ $exit_minishell != $exit_bash ]] ; then
+				echo "Exit Code Bash: $exit_bash"
+				echo "Exit Code Minishell: $exit_minishell"
 				echo -ne "❌\033[1;31m [ minishell($exit_minishell)  bash($exit_bash) ]\033[m  " | tr '\n' ' '
 				((TEST_KO_EXIT++))
 				((FAILED++))
